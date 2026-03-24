@@ -16,7 +16,7 @@ from sqlglot.errors import ErrorLevel
 
 class OracleAPI:
 
-    def __init__(self, username: str = None, password: str = None, host: str = None, port: int = None, service: str = None,
+    def __init__(self, username: str = None, password: str = None, host: str = None, port: int = 1521, service: str = None,
                  thin_mode: bool = True, client_path: str = None, env_path: str = None):
 
         self._pk_cache = {}
