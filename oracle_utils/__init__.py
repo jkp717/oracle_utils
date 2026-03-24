@@ -141,27 +141,44 @@ class OracleAPI:
             self._pk_cache[full_path] = [row['COLUMN_NAME'] for row in pk_results]
         return self._pk_cache[full_path]
 
-    def select_to_dict(self, sql: Union[str, IO], *args, **kwargs) -> List[dict]:
-        """
-        Returns a python dictionary containing the results of the SELECT sql.
-
-        :param sql: Query string OR a file-like object containing the SQL.
-        :param args: Bind variables by position (optional)
-        :param kwargs: Bind variables by name (optional)
-        :return: List of dictionaries
-        """
-        # If the object has a 'read' method, extract the string content
+    # def select_to_dict(self, sql: Union[str, IO], *args, **kwargs) -> List[dict]:
+    #     """
+    #     Returns a python dictionary containing the results of the SELECT sql.
+    #
+    #     :param sql: Query string OR a file-like object containing the SQL.
+    #     :param args: Bind variables by position (optional)
+    #     :param kwargs: Bind variables by name (optional)
+    #     :return: List of dictionaries
+    #     """
+    #     # If the object has a 'read' method, extract the string content
+    #     query = sql.read() if hasattr(sql, 'read') else sql
+    #
+    #     if args or kwargs:
+    #         result = self.cursor.execute(query, *args, **kwargs).fetchall()
+    #     else:
+    #         result = self.cursor.execute(query).fetchall()
+    #
+    #     col_names = [col[0] for col in self.cursor.description]
+    #     output = []
+    #     for row in result:
+    #         output.append({col_names[i]: row[i] for i in range(len(col_names))})
+    #     return output
+    def select_to_dict(self, sql: Union[str, IO], *args, chunksize: int = 2000, **kwargs) -> List[dict]:
         query = sql.read() if hasattr(sql, 'read') else sql
 
         if args or kwargs:
-            result = self.cursor.execute(query, *args, **kwargs).fetchall()
+            self.cursor.execute(query, *args, **kwargs)
         else:
-            result = self.cursor.execute(query).fetchall()
+            self.cursor.execute(query)
 
+        self.cursor.arraysize = chunksize
         col_names = [col[0] for col in self.cursor.description]
         output = []
-        for row in result:
-            output.append({col_names[i]: row[i] for i in range(len(col_names))})
+        while True:
+            rows = self.cursor.fetchmany(chunksize)
+            if not rows:
+                break
+            output.extend(dict(zip(col_names, row)) for row in rows)
         return output
 
     def select_to_single_column_list(self, sql: str) -> list:
